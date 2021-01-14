@@ -1,0 +1,29 @@
+#Import the TwitterAPI package and create the request with the access tokens
+from TwitterAPI import TwitterAPI
+
+SEARCH_TERM = 'narendra modi'
+PRODUCT = 'fullarchive'
+LABEL = 'Development'
+
+api = TwitterAPI("Consumer Key", 
+             "Consumer Pvt Key", 
+             "Access Token ", 
+             "Access secret token")
+
+r = api.request('tweets/search/%s/:%s' % (PRODUCT, LABEL), 
+           {'query':SEARCH_TERM, 
+           'fromDate':'201403010000', #Different fromDate and toDate values to extract tweets from different timelines	
+           'toDate':'201602280000',
+            
+           }
+           )
+
+#Open a CSV writer 
+csvFile = open('Feb28_16.csv', 'a',encoding='utf-8')
+csvWriter = csv.writer(csvFile)
+
+#Write tweets to a CSV file
+for item in r.get_iterator():
+    csvWriter.writerow([item['created_at'],item['user']['screen_name'], item['text'] if 'text' in item else item])
+
+csvFile.close()

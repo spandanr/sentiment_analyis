@@ -1,0 +1,39 @@
+Python code for data cleaning and pre-processing 
+
+#Import necessary packages in python
+import csv
+import os
+import pandas as pd
+import glob
+
+# Read all tweets CSV files and merge into a single CSV file in the working directory
+
+fileList=glob.glob("D:\\ISB\\Practicum\\Tweets\\*.csv")
+# print(len(fileList))
+dfList=[]
+colnames=["Date","User","Tweets","Month_Year"]
+for each in fileList:
+    df1=pd.read_csv(each,header=None)
+    dfList.append(df1)
+concatDf=pd.concat(dfList,axis=0)
+concatDf.columns=colnames
+
+concatDf['Month_Year']=pd.to_datetime(concatDf['Date'],errors="coerce").dt.strftime("%b-%y")
+
+#Python function to clean the tweets
+
+def clean_String(strinput):
+    temp=strinput.lower()  
+    temp=re.sub('[^\sa-zA-Z0-9.-]','',temp) # Remove any special characters except numbers 0-9 letters a-z and A-Z and special characters “. –“
+    temp=re.sub('[^a-zA-Z\\s]','',temp) #Remove any non-alphabetic characters  followed by a space
+    temp=re.sub('http\S+','',temp) #Remove the http urls from the tweets
+     
+    return(temp)
+
+#Create a new Clean_Text column after applying the above Clean_String function to each tweet
+concatDf['Clean_Text'] = concatDf.apply(lambda row: clean_String(row['text']),axis=1)
+
+
+#Output the cleaned dataframe to a CSV file for sentiment analysis in R 
+concatDf.to_csv("Final_clean_tweet.csv")
+

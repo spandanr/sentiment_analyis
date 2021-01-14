@@ -1,0 +1,54 @@
+#Reading the tweets file into a R dataframe
+#Setting the working directory
+setwd("D:\\ISB\\Practicum\\")
+
+tweet = read.csv("Combined_Tweets_file.csv",header=TRUE,stringsAsFactors=FALSE)
+
+#Pulling the sentiments in AFINN dictionary into a df
+AFINN <- get_sentiments("afinn")
+AFINN
+
+#Month wise sentiment analysis
+#Generating the tokens in the cleaned text column in the corpus grouping by Month_year
+senti.afinn <-tweet %>%group_by(Month_Year)%>%
+  mutate(ln = row_number())%>%
+  ungroup() %>%
+  unnest_tokens(word, Clean_Text)
+
+
+#Generating the sentiment score by joining with AFINN lexicon and generate a net sentiment score for each month
+senti_score <- senti.afinn%>%inner_join(AFINN) %>%    
+  group_by(date) %>%
+  summarise(sentiment = sum(score)) %>%
+  mutate(method = "afinn")
+
+#Plotting the sentiment score month wise
+ggplot(senti_score,
+       aes(Month_year, sentiment)) +
+  geom_line(stat = "identity", show.legend = FALSE) +
+  labs(title = "Sentiment Month wise",
+       x = "Month",
+       y = "Sentiment")
+
+
+#Year wise sentiment analysis
+#Generating the tokens in the cleaned text column in the corpus grouping by Year
+senti.afinn.year <-tweet %>%group_by(Year)%>%
+  mutate(ln = row_number())%>%
+  ungroup() %>%
+  unnest_tokens(word, Clean_Text)
+
+#Generating the sentiment score by joining with AFINN lexicon and generate a net sentiment score for each year
+senti_score_year <- senti.afinn.year%>%inner_join(AFINN) %>%    
+  group_by(Year) %>%
+  summarise(sentiment = sum(score)) %>%
+  mutate(method = "afinn")
+
+#Plotting the sentiment score year wise
+
+ggplot(senti_score,
+       aes(Year, sentiment)) +
+  geom_line(stat = "identity", show.legend = FALSE) +
+  labs(title = "Sentiment Year wise",
+       x = "Year",
+       y = "Sentiment")

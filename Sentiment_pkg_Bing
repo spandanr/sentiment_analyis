@@ -1,0 +1,111 @@
+SENTIMENT ANALYSIS
+BING APPROACH
+
+#Reading all the Tweets in a directory to R data frame
+            
+ files <- list.files(path = "C:\\Users\\SONY\\Tweets")
+ Tweets_df = data.frame()
+ for ( f in files)
+{  Tweets_df  <-  Tweets_df %>% rbind(read.csv(f,stringsAsFactors = F,header = F))  }
+
+### Adding the name to data columns
+colnames(Tweets_df) <- c("date","user","text")
+
+### Removing blank tweets 
+Tweets_df <- Tweets_df %>% subset(.,Tweets_df$text!='')
+
+### Extracting date from the Tweets_df in the format of Month Year
+Tweets_df$date <- paste(substr(Tweets_df$date,5,7),substr(Tweets_df$date,27,31))
+
+
+#Function to clean the string 
+
+clean_string <- function(string)
+{
+ Text <- gsub('[^0-9a-zA-Z]+',' ',string)
+Text <- gsub('http[a-zA-Z0-9]+','',Text)
+Text <- gsub('\\s+',' ',Text)
+Text <- tolower(Text)
+stpw1 <- read.table("H:\\ISB Term1\\Residency 2 DC\\Stopwords.txt")
+stpw2 <- tm::stopwords('english')
+t_stopwords = unique(gsub("'"," ",unique(c(stpw1,stpw2))))
+Text <- removeWords(Text,t_stopwords)
+return (Text)
+}
+
+#Function to clean text block 
+
+clean_block <- function(text)
+{
+text <- text[text != '']
+cleaned_text <- NULL
+
+for ( i in 1:length(text))
+{
+cleaned_text <- append(cleaned_text,clean_string(text[i]))
+}
+num_tokens <- length(cleaned_text)
+unique_tokens <- length(unique(cleaned_text))
+cleaned_list <- list (num_tokens,unique_tokens,cleaned_text)
+return(cleaned_list)
+}
+
+# Calculating the polarity/sentiment score for each month using BING lexicon
+
+cleaned_tweets <- clean_block(Tweets_df$text)
+
+Tweets_tokens <- data_frame(text = cleaned_tweets[[3]]) %>% mutate(month = as.yearmon(Tweets_df$date,'%b %Y') ) %>% 
+                 arrange(month) %>% select(text,month) %>% 
+                 unnest_tokens(word,text) %>%
+                 inner_join(get_sentiments("bing")) %>%
+                 count(sentiment, index = month, sort = T) %>% spread(sentiment, n, fill = 0) %>%
+                 mutate(polarity = (positive - negative))    #create variable polarity = pos – neg
+
+# Plotting the polarity for each month using ggplot2
+ ggplot(Tweets_tokens, aes(as.Date(Tweets_tokens$index),polarity)) + geom_bar(stat =  "identity",fill = "#0000FF") +  theme(axis.text.x = element_text(angle = 90, vjust = .5)) + labs (x = 'Month') +        scale_x_date(date_labels="%b %y",date_breaks  ="3 month") +  theme(axis.text.x = element_text(angle = 90, vjust = .5))
+
+# Plotting the word cloud for Positive and negative months
+
+# Months with positive sentiment
+#As from the plot we can see that from May 14 to Feb 15 there has been a positive sentiment
+
+Pos_Months <- c('May 2014','Jun 2014','Jul 2014','Aug 2014','Sep 2014','Oct 2014','Nov 2014','Dec 2014','Jan 2015','Feb 2015')
+Pos_Months_df <- subset(Tweets_df,date %in% Pos_Months)
+Cleaned_tweets_Pos <- clean_block(Pos_Months_df$text)
+Cleaned_tokens_Pos <- data_frame(text = unique(Cleaned_tweets_Pos[[3]]))  %>% 
+                      unnest_tokens(word,text) %>%
+                      inner_join(get_sentiments("bing")) %>% subset(.,sentiment == 'positive') %>%
+                      count(word,sort = T) %>% rename(freq = n)
+
+#Plotting the word cloud of positive words in initial months
+
+wordcloud(words =     Cleaned_tokens_Pos$word, 
+                      freq = Cleaned_tokens_Pos$freq, 
+                      min.freq = 2, 
+                      random.order = FALSE, 
+                      colors = brewer.pal(6, "Dark2"))
+
+
+#Months with negative sentiment
+#As From the plot we can see that from Jul 17 to Aug 18 there has been negative sentiment.
+
+Neg_Months <- c('Jul 2017','Aug 2017','Sep 2017','Oct 2017','Nov 2017','Dec 2017','Jan 2018',
+                                'Feb 2018','Mar 2018','Apr 2018','May 2018','Jun 2018','Jul 2018','Aug 2018')
+
+Neg_Months_df <- subset(Tweets_df,date %in% Neg_Months)
+Cleaned_tweets_Neg <- clean_block(Neg_Months_df$text)
+
+Cleaned_tokens_Neg <- data_frame(text = unique(Cleaned_tweets_Neg[[3]]))  %>% 
+                      unnest_tokens(word,text) %>%
+                      inner_join(get_sentiments("bing")) %>% subset(.,sentiment == 'negative') %>%
+                      count(word,sort = T) %>% rename(freq = n)
+
+#Plotting the word cloud for negative sentiment words
+
+wordcloud(words = Cleaned_tokens_Neg$word, 
+          freq = Cleaned_tokens_Neg$freq, 
+          min.freq = 2, 
+          #max.words = 100,
+          random.order = FALSE, 
+          colors = brewer.pal(6, "Dark2"))
+
